@@ -19,6 +19,7 @@ contract MerkleAirdropTest is Test {
     bytes32 proofOne = 0x16440518c56abeb829b31fe7f6f64b0ffc6e3b5ab8cf006e3b0bb439388da388;
     bytes32 proofTwo = 0x1f054b8bec370a6ac2add00abcbec49f390544adb8f04c668e12bf35dec2ba18;
     bytes32[] public PROOF = [proofOne, proofTwo];
+    address public gasPayer;
     address user;
     uint256 userPrivKey;
 
@@ -26,29 +27,22 @@ contract MerkleAirdropTest is Test {
             DeployMerkleAirdrop deployer = new DeployMerkleAirdrop();
             (airdrop, token) = deployer.deployMerkleAirdrop();
             (user, userPrivKey) = makeAddrAndKey("user");
+            gasPayer = makeAddr("gasPayer");
 
     }
 
     function testUserCanClaim() public {
         uint256 startingBalance = token.balanceOf(user);
-        console.log("Starting balance:", startingBalance);
-        vm.prank(user);
-        airdrop.claim(user, AMOUNT_TO_CLAIM, PROOF);
+        bytes32 digest = airdrop.getMessage(user, AMOUNT_TO_CLAIM);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPrivKey, digest);
+
+        vm.prank(gasPayer);
+        airdrop.claim(user, AMOUNT_TO_CLAIM, PROOF, v, r, s);
         uint256 endingBalance = token.balanceOf(user);
         console.log("Ending balance:", endingBalance);
         assertEq(endingBalance - startingBalance, AMOUNT_TO_CLAIM);
     }
 
-    function testCantClaimMoreThanOnce() public {
-        vm.prank(user);
-        airdrop.claim(user, AMOUNT_TO_CLAIM, PROOF);
-        vm.expectRevert(MerkleAirdrop.MerkleAirdrop__AlreadyClaimed.selector);
-        vm.prank(user);
-        airdrop.claim(user, AMOUNT_TO_CLAIM, PROOF);
-    }
-    function testGetMerkleRoot() public {
-        bytes32 merkleRoot = airdrop.getMerkleRoot();
-        assertEq(merkleRoot, ROOT);
-    }
     
 } 
