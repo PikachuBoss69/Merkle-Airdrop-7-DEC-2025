@@ -51,6 +51,7 @@ contract MerkleAirdrop is EIP712{
         i_airdropToken.safeTransfer(account, amount);
     }
 
+
     function getMessage(address account, uint256 amount) public view returns(bytes32){
         return _hashTypedDataV4(keccak256(abi.encode(
            Message_Hash,
